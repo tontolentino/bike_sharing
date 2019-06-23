@@ -1,4 +1,13 @@
-Bike Sharing Exploration by "Grupo 6"
+---
+title: "Bike Sharing"
+author: Nériton Tolentino
+date: June 8, 2019
+output: 
+  github_document:
+    html_preview: false
+---
+
+Bike Sharing Exploration by Nériton Tolentino
 ========================================================
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, packages}

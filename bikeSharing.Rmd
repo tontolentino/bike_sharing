@@ -1,0 +1,656 @@
+Bike Sharing Exploration by "Grupo 6"
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+# chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk. This
+# prevents the code from displaying in the knitted HTML output. You should set
+# echo=FALSE for all code chunks in your file, unless it makes sense for your
+# report to show the code that generated a particular plot.
+
+# The other parameters for "message" and "warning" should also be set to FALSE
+# for other code chunks once you have verified that each plot comes out as you
+# want it to. This will clean up the flow of your report.
+
+library(ggplot2)
+library(psych)
+library(dplyr)
+library(tidyr)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Load_the_Data}
+# Load the Data
+
+hour <- read.csv('hour.csv')
+```
+
+# Univariate Plots Section
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Dataset_dimensions}
+# Dataset dimensions:
+
+sprintf('The HOUR dataset has %i rows and %i columns',
+        dim(hour)[1],
+        dim(hour)[2])
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Dataset_structure}
+# Dataset structure:
+
+str(hour)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Dataset_Summary}
+# Dataset summary:
+
+summary(hour)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Format}
+# Make a copy of dataset in order to transform some features:
+
+df <- hour
+
+# Create "day" column base on "dteday"
+df$day <- as.numeric(format(as.Date(df$dteday,format="%Y-%m-%d"), "%d"))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Transform_categorical}
+# Transform categorical variables from int:
+
+df$season <- factor(df$season, labels = c("Winter", "Spring",
+                                             "Summer", "Fall"))
+df$weathersit <- factor(df$weathersit, labels = c("Good", "Normal", "Bad", 
+                                                  "Very Bad"))
+
+df$weekday <- factor(df$weekday, labels = c("Sunday", "Monday", "Tuesday",
+                                            "Wednesday", "Thursday","Friday",
+                                            "Saturday"))
+
+df$yr <- factor(df$yr, labels = c("2011", "2012"))
+
+df$mnth <- factor(df$mnth, labels = c("Jan", "Fev", "Mar", "Apr", "May", "Jun", 
+                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dez"))
+
+df$workingday <- as.factor(df$workingday)
+df$holiday <- as.factor(df$holiday)
+df$hr <- as.factor(df$hr)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Transform_numeric}
+# Transform normalized "temp" and "atemp" to real scale:
+
+library(scales)
+
+temp_max = 39
+temp_min = -8
+atemp_max = 50
+atemp_min = -16
+
+df$temp <- df$temp*(temp_max - temp_min) + temp_min
+df$atemp <- df$atemp*(atemp_max - atemp_min) + atemp_min
+
+
+# Transform normalized "hum" to real scale:
+
+df$hum <- df$hum * 100
+
+
+# Transform normalized "windspeed" to real scale:
+
+df$windspeed <- df$windspeed * 67
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots_1}
+# Plot histogram of "temp" by "season":
+
+ggplot(aes(x = temp), data = df) +
+  geom_histogram(binwidth = 1) +
+  theme_minimal()
+
+```
+
+The "temp" variable histogram do not tell us anything special except that renting is more common between 0 and 30 degrees. We will explore this data more deeply with other variables later.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots_2}
+# Plot histogram of "atemp":
+
+ggplot(aes(x = atemp), data = df) +
+  geom_histogram(binwidth = 1) +
+  theme_minimal()
+
+```
+
+It looks like there is a multimodal distribution in this variable, with atemp peaking around 5, 12, 18 and 22 degrees.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots_3}
+# Plot histogram of "hum":
+
+ggplot(aes(x = hum), data = df) +
+  geom_histogram(binwidth = 4) +
+  theme_minimal()
+
+```
+
+The histogram of "hum" varible seems a little left skewed.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots_4}
+# Plot histogram of "windspeed":
+
+ggplot(aes(x = windspeed), data = df) +
+  geom_histogram(binwidth = 3.5) +
+  theme_minimal()
+
+```
+
+Here we note a concentration of 0 values and then a right skewd distribution. We do not know if those 0 values are missing filled with 0 or the windspeed was really 0 at that moment.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots_5}
+# weathersit barplot:
+
+ggplot(aes(x = weathersit), data = df) +
+  geom_bar() +
+  scale_y_continuous(limits = c(0, 13000)) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -1)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots_6}
+# season barplot:
+
+ggplot(aes(x = season), data = df) +
+  geom_bar() +
+  scale_y_continuous(limits = c(0, 5500)) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -1)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots_7}
+# weekday barplot:
+
+ggplot(aes(x = weekday), data = df) +
+  geom_bar() +
+  scale_y_continuous(limits = c(0, 3500)) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -1)
+
+```
+
+Most of the days have good weather situation and there was only 3 days when the weather was very bad. We also note more records in the Summer and slightly more records on the weekends compared to the other days.
+
+# Univariate Analysis
+
+## What is the structure of your dataset?
+
+This dataset contains the hourly count of rental bikes between years 2011 and 2012 in a bikeshare system with the corresponding weather and seasonal information. We have a total of 17,379 hour counts with 14 features (season, year, month, hour, holiday, weekday, workingday, weather situation, temperature, feeling temperature, humidity, windspeed, count of casual users and count of registered users).
+
+Some observations:
+
+* weathersit has values of "Good", "Normal", "Bad" and "Very Bad";
+* seaon has values of "Spring", "Summer", "Fall" and "Winter".
+
+## What is/are the main feature(s) of interest in your dataset?
+
+I suspect the main features in the dataset are related to the weather situation of the day, like temperature and humidity. The hour of the day and the day of the week are other variables that may have a strong influence in demand, since people would like to rent a bike to go to work/school.
+
+## What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+
+I suppose windspeed, season and month may also contribute to rental demand. If a certain day is a holiday or not might be important as well. 
+
+### Did you create any new variables from existing variables in the dataset?
+
+No, I did not.
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+No, there were not.
+
+
+# Bivariate Plots Section
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_1}
+# Plot matrix:
+
+pairs.panels(select(df, temp, atemp, hum, windspeed,
+                    casual, registered, cnt), scale=TRUE)
+
+```
+
+Here in the plot matrix we can clearly see that temperature and feeling temperature are highly correlated 0.99 (as we obviously expected!).
+There is a moderate correlation between temperature and casual users as well. And more, this correlation is stronger than the one between temperature and registered users. This may be because registered users rent bikes to go to work/school and they are less sensible to temperature since they would go to their destination even though.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_2}
+# Boxplot of count by year
+
+ggplot(aes(x = yr, y = cnt),
+       data = df) +
+  geom_boxplot()
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_3}
+# Boxplot of count by year
+
+tapply(df$cnt, df$yr, summary)
+
+```
+
+It looks like the demand is increasing from 2011 to 2012.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_4}
+# Boxplot of count by hour
+
+ggplot(aes(x = hr, y = cnt),
+       data = df) +
+  geom_boxplot()
+
+# Boxplot of casual by hour
+
+ggplot(aes(x = hr, y = casual),
+       data = df) +
+  geom_boxplot()
+
+# Boxplot of registered by hour
+
+ggplot(aes(x = hr, y = registered),
+       data = df) +
+  geom_boxplot()
+
+```
+
+From the boxplot of cnt, casual and registered by hour of the day we can infer that the demand for registered users has two peaks: one between 7am and 8am and other between 5pm and 6pm. On the other side, casual user's demand is smoother and more concentrated between 10am and 7pm.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_5}
+# Boxplot of count by month
+
+ggplot(aes(x = mnth, y = cnt),
+       data = df) +
+  geom_boxplot()
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_6}
+# Boxplot of count by season
+
+ggplot(aes(x = season, y = cnt),
+       data = df) +
+  geom_boxplot()
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_7}
+# Boxplot of count by year
+
+tapply(df$cnt, df$season, summary)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_8}
+# Boxplot of count by season
+
+ggplot(aes(x = weathersit, y = cnt),
+       data = df) +
+  geom_boxplot()
+
+```
+
+From the boxplot above we can see the demand for renting bikes is concentrated between the months of Spring and Summer. Besides that, the demand for days with Bad and Very Bad weather situation is considerably lower than Good and Normal days.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_9}
+# Boxplot of temp by season:
+ggplot(aes(x = season, y = temp),
+       data = df) +
+  geom_boxplot()
+
+
+# Boxplot of temp by month:
+ggplot(aes(x = mnth, y = temp),
+       data = df) +
+  geom_boxplot()
+
+# Boxplot of temp by weathersit:
+ggplot(aes(x = weathersit, y = temp),
+       data = df) +
+  geom_boxplot()
+
+```
+
+Here again, we can see that temperature is an important feature because when the demand is stronger (Spring and Summer / Good and Normal days) the temperature is higher.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_10}
+# Boxplot of hum by season:
+ggplot(aes(x = season, y = hum),
+       data = df) +
+  geom_boxplot()
+
+
+# Boxplot of hum by month:
+ggplot(aes(x = mnth, y = hum),
+       data = df) +
+  geom_boxplot()
+
+# Boxplot of hum by weathersit:
+ggplot(aes(x = weathersit, y = hum),
+       data = df) +
+  geom_boxplot()
+
+```
+
+I can not see a strong trend in humidity between seasons/months, although we note that the months with higher demand are not the ones with high/lower humidity. Also, the Bad and Very Bad days have high humidity indicators.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_11}
+# Boxplot of windspeed by season:
+ggplot(aes(x = season, y = windspeed),
+       data = df) +
+  geom_boxplot()
+
+
+# Boxplot of windspeed by month:
+ggplot(aes(x = mnth, y = windspeed),
+       data = df) +
+  geom_boxplot()
+
+# Boxplot of windspeed by weathersit:
+ggplot(aes(x = weathersit, y = windspeed),
+       data = df) +
+  geom_boxplot()
+
+```
+
+From the boxplots above I cannot see a clear trend in windspeed between season/month.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_12}
+# Casting holiday as factor:
+df$holiday <- as.factor(df$holiday)
+
+# Boxplot of casual by holiday:
+ggplot(aes(x = holiday, y = casual),
+       data = df) +
+  geom_boxplot()
+
+# Boxplot of registered by holiday:
+ggplot(aes(x = holiday, y = registered),
+       data = df) +
+  geom_boxplot()
+
+```
+
+Here, I can see a higher demand for casual users on holidays and the opposite for registered users.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_13}
+# Boxplot of casual by weekday:
+ggplot(aes(x = weekday, y = casual),
+       data = df) +
+  geom_boxplot()
+
+# Boxplot of registered by weekday:
+ggplot(aes(x = weekday, y = registered),
+       data = df) +
+  geom_boxplot()
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots_14}
+# Casting workingday as factor:
+df$workingday <- as.factor(df$workingday)
+
+# Boxplot of casual by workingday:
+ggplot(aes(x = workingday, y = casual),
+       data = df) +
+  geom_boxplot()
+
+# Boxplot of registered by workingday:
+ggplot(aes(x = workingday, y = registered),
+       data = df) +
+  geom_boxplot()
+
+```
+
+When we look to weekdays we see that the demand of casual users is clearly higher on weekends while registered users rent more bikes on working days
+
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+I noticed that weather situation is closely related with temperature and humidity. As one also might expect, the temperature and humidity are very correlated with season and month of the year. Hence, there is a trend in demand for bike renting related to this variables: as temperature increses, the demand goes up too.
+
+When we look to hour of day and day of week, there is a very different renting behaviour between casual and registered users. Casual users rent more bikes in the middle of the day and on holidays, whereas registered users rent more bikes on working days and in rush hours.
+This is important to know because we could offer different products to different kind of users.
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+Yes, we noticed there is a relationship between renting demand and season/month, but this might be influenced by temperature that varies among the seasons of the year.
+
+Another important observation to make is that renting demand changes with holidays. And more, the change is different for casual and registered users.
+
+### What was the strongest relationship you found?
+
+The demand is strongly correlated with the hour of the day. Also, the month and season have both high influence on demand. This may be because of temperature and humidity changes during the year and this is caught mostly by month and season variables. Finally, if the day is a holiday or a weekend also changes the way people rent bikes.
+
+# Multivariate Plots Section
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots_1}
+# Lineplot of mean count by hour and weekday
+
+df1 <- df %>% 
+  group_by(hr, weekday) %>% 
+  summarise(mean_count = mean(cnt))
+
+df1$hr <- as.integer(df1$hr)
+
+ggplot(aes(x = hr, y = mean_count, color = weekday),
+       data = df1) +
+  geom_line() +
+  geom_point(size = 1) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 24, 1))
+
+```
+
+Here, we can clearly see there is a strong seasonality during the hours of a day, with demand peaks at 9 AM and 6 to 7 PM on weekdays. On weekends, the demand for bike renting is concentrated between 11 AM and 7 PM, but it is not as high as on weekdays. This tells us again that most of our clients may be renting a bike to go to work/school.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots_2}
+
+# Lineplot of mean count by month and weekday
+
+df1 <- df %>% 
+  group_by(mnth, weekday) %>% 
+  summarise(mean_count = mean(cnt))
+
+df1$mnth <- as.integer(df1$mnth)
+
+ggplot(aes(x = mnth, y = mean_count, color = weekday),
+       data = df1) +
+  geom_line() +
+  geom_point(size = 1) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 12, 1))
+
+```
+
+
+This lineplot of mean count by month and weekday is interesting. It shows us once again the demand is weaker during the colder seasons (winter and fall). When it comes to weekdays, the lines have similar behaviors along the year, but when we look to weekends, there are demand peaks in June and September (surprisingly overtaking the demand on weekdays!) and a drop of it in July and August. This is counterintuitive for me, because I was expecting more demand on weekends in hot months.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots_3}
+
+# Lineplot of mean count by hour and season
+
+df1 <- df %>% 
+  group_by(hr, season) %>% 
+  summarise(mean_count = mean(cnt))
+
+df1$hr <- as.integer(df1$hr)
+
+ggplot(aes(x = hr, y = mean_count, color = season),
+       data = df1) +
+  geom_line() +
+  geom_point(size = 1) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 24, 1))
+
+```
+
+This lineplot of mean count by hour and season aggregates two of the most important variables that affects bike renting demand. Here we can see the variation in demand during the hours of a day is present in all seasons. Besides that, cold weather drastically determines demand.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots_4}
+# Lineplot of mean count by hour by hour and type of user
+df2 <- gather(df, user, count, casual:registered)
+
+df1 <- df2 %>% 
+  group_by(hr, user) %>% 
+  summarise(mean_count = mean(count))
+
+df1$hr <- as.integer(df1$hr)
+
+ggplot(aes(x = hr, y = mean_count, color = user),
+       data = df1) +
+  geom_line() +
+  geom_point(size = 1) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 24, 1))
+
+```
+
+With this plot of mean count by hour of the day and type of user is easier to see the different renting behavior between casual and registered users. While registered users rent bikes like they would be going to work/school (bacause of the peaks on demand), casual users rent like they were tourists.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots_5}
+# Lineplot of mean count by hour by type of user
+
+df1 <- df2 %>% 
+  group_by(weekday, user) %>% 
+  summarise(mean_count = mean(count))
+
+#df1$mnth <- as.integer(df1$mnth)
+
+ggplot(aes(x = weekday, y = mean_count, color = user),
+       data = df1) +
+  geom_col() +
+  theme_minimal()
+
+```
+
+This barplot tells us one more information about differences between casual and registered users: on weekends, there are more casual users using the service compared to weekdays. This might be local users that don't use the service to go to work/school and we could convert them in registered users, since they may have a bike station near home.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots_6}
+
+ggplot(aes(x = temp, fill = weathersit), data = df) +
+  geom_histogram() +
+  facet_wrap(df$season) +
+  scale_fill_brewer(type = 'qual')
+
+```
+
+This last plot might help us identify the relationship between season and bike renting demand. It shows us the count of days by temperature and weather situation among seasons. So, in the summer, when the quantity of days with high temperature and good weather is greater than in others seasons, we have the highest demand for renting. 
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+The hour of the day is a very important feature for bike renting demand. But this feature combined with weekday, type of user and season is even stronger. This is evidencing the different kinds of renting behavior we have in our business case due to weather conditions and why people is renting our bikes for.
+
+### Were there any interesting or surprising interactions between features?
+
+The demand variation pattern along the day holds across the four seasons, even with a great drop on demand level in the winter.
+Also, there is a drop on demand for weekends during hot months, which is counterintuitive for me.
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_One}
+
+# Boxplot of count by hour
+
+ggplot(aes(x = hr, y = cnt),
+       data = df) +
+  geom_boxplot() +
+  labs(x = "Hour of Day", y ="Bike Count") +
+  ggtitle("Boxplot of Bike Count by Hour of Day") +
+  theme_minimal()
+
+```
+
+### Description One
+
+The bike renting demand seems to have two peaks along the day, perhaps because people habits (going to work/school).
+
+### Plot Two
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Two}
+
+# Lineplot of mean count by hour and weekday
+
+df1 <- df %>% 
+  group_by(hr, weekday) %>% 
+  summarise(mean_count = mean(cnt))
+
+df1$hr <- as.integer(df1$hr)
+
+ggplot(aes(x = hr, y = mean_count, color = weekday),
+       data = df1) +
+  geom_line() +
+  geom_point(size = 1) +
+  theme_minimal() +
+  labs(x = "Hour of Day", y ="Bike Mean Count") +
+  ggtitle("Lineplot of Bike Mean Count by Hour of Day and Weekday") +
+  scale_x_continuous(breaks = seq(0, 24, 1))
+
+```
+
+### Description Two
+
+The day of the week is also very important to identify the demand because of why users rent bikes (to go to work/school or leisure).
+
+### Plot Three
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Three}
+
+# Lineplot of mean count by hour and season
+
+df1 <- df %>% 
+  group_by(hr, season) %>% 
+  summarise(mean_count = mean(cnt))
+
+df1$hr <- as.integer(df1$hr)
+
+ggplot(aes(x = hr, y = mean_count, color = season),
+       data = df1) +
+  geom_line() +
+  geom_point(size = 1) +
+  theme_minimal() +
+  labs(x = "Hour of Day", y ="Bike Mean Count") +
+  ggtitle("Lineplot of Bike Mean Count by Hour of Day and Season") +
+  scale_x_continuous(breaks = seq(0, 24, 1))
+
+```
+
+### Description Three
+
+The lineplot shows us the variation pattern along the day and differences in demand between seasons, mostly because temperature and weather situation shaping the rent behavior.
+
+------
+
+# Reflection
+
+This dataset contains the hourly count of rental bikes between years 2011 and 2012 in Capital bikeshare system with the corresponding weather and seasonal information.
+
+I started plotting some histograms of numeric variables as temperature, feeling temperature, humidity and windspeed. Those first plots were not too conclusive, but gave me some clues like the multimodal temperature distribution that I investigated further later.
+
+In the bivariate plots section the variation on demand along the day/month became clearer and so did the variation due to temperature and weather situation. The plot matrix helped me understand the correlation between variables and then explore deeper those relationships. The type of user (casual/registered) is also a very interesting variable to look at. Demand behavior is modeled by the reason a user is renting a bike for: to go to work/school or for leisure.
+
+As one would expect, there is a potential to increase the baseline of registered users, since we found out with the barplot in the multivariate plot section that there are users renting bikes only on weekends. 
+
+For future work I would try to create a regression model to predict the bike renting demand using climate and datetime information provided by the dataset.
